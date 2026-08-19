@@ -1,2 +1,1 @@
-# mensageforia
-# mensageforia
+Mensageforia is a personal automation project built with Go (Fiber). Hosted on a local home server using Docker, it integrates with a local LLM via Ollama to generate random motivational messages. A built-in cron scheduler triggers the generation at 8:00 AM, 12:00 PM, and 6:00 PM, automatically committing the new message to the repository. A GitHub Actions workflow then takes over, emailing the routine update and the AI-generated message.
