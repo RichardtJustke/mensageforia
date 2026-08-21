@@ -1,4 +1,4 @@
-package scheduler
+package sheduler
 
 import (
 	"log/slog"
