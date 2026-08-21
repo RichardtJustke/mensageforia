@@ -3,6 +3,7 @@ package message
 import (
 	"fmt"
 	"math/rand/v2"
+	"mensageforia/internal/ollama"
 )
 
 var temas = []string{
@@ -38,4 +39,18 @@ func temaPrompt() string {
 
 	return promptFinal
 
+}
+func GenerateAndCommit(client *ollama.Client) error {
+	prompt := temaPrompt()
+
+	resposta, err := client.Generate(prompt)
+	if err != nil {
+		return fmt.Errorf("gerar mensagem: %w", err)
+	}
+
+	fmt.Println("Resposta gerada:", resposta)
+
+	// próximos passos aqui: storage.Save(...), salvar .md, git commit
+
+	return nil
 }
