@@ -8,13 +8,15 @@ RUN go mod download
 #ececuta os comando no shell da aplicação
 COPY . .
 #copia para a raiz
-RUN go build cmd/api/main.go
+RUN go build -o /app/mensageforia cmd/server/main.go
 #executa o biniario do go 
 FROM alpine:3.24
 #a imagem do docker que ficara rodando
 WORKDIR /app
 
-COPY --from=builder /app/main . 
+# Instalar git na imagem final (necessário para os/exec)
+RUN apk add --no-cache git
 
-ENTRYPOINT ["./main"]
+COPY --from=builder /app/mensageforia .
 
+ENTRYPOINT ["./mensageforia"]
