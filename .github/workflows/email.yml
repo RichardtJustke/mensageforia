@@ -1,0 +1,56 @@
+name: Send Message Email
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - messages/**
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read changed markdown file
+        id: read_file
+        run: |
+          FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.md$' || true)
+          if [ -z "$FILES" ]; then
+            FILES=$(ls -t messages/*.md 2>/dev/null | head -1)
+          fi
+          echo "changed_file=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Display file content
+        run: |
+          if [ -n "${{ steps.read_file.outputs.changed_file }}" ]; then
+            cat "${{ steps.read_file.outputs.changed_file }}"
+          fi
+
+      - name: Send email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: "Nova mensagem motivacional gerada"
+          body: |
+            <h3>Nova mensagem automática</h3>
+            <p><strong>Tema:</strong> ${THEME}</p>
+            <p><strong>Horário:</strong> ${TIMESTAMP}</p>
+            <p>${CONTENT}</p>
+          from: "${EMAIL_USER}"
+          to: "${EMAIL_TO}"
+          password: "${EMAIL_PASS}"
+          from_name: "MensageForia Bot"
+          secure: true
+        env:
+          THEME: ${{ github.event.head_commit.message || 'unknown' }}
+          TIMESTAMP: $(date -u +"%Y-%m-%d %H:%M UTC")
+          CONTENT: |
+            <p>Uma nova mensagem motivacional foi gerada:</p>
+            <pre>${{ steps.read_file.outputs.changed_file }}</pre>
+          EMAIL_USER: "${{ secrets.EMAIL_USER }}"
+          EMAIL_TO: "${{ secrets.EMAIL_TO }}"
+          EMAIL_PASS: "${{ secrets.EMAIL_PASS }}"
