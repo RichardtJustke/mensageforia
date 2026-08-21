@@ -5,18 +5,25 @@ WORKDIR /app
 COPY go.mod go.sum .
 #os arquivos que vão ser copiados para a imagem
 RUN go mod download
-#ececuta os comando no shell da aplicação
+#copia tudo, incluindo o .git (necessário para commit/push de dentro do container)
 COPY . .
-#copia para a raiz
 RUN go build -o /app/mensageforia cmd/server/main.go
-#executa o biniario do go 
+
 FROM alpine:3.24
-#a imagem do docker que ficara rodando
+#imagem final que fica rodando
 WORKDIR /app
 
-# Instalar git na imagem final (necessário para os/exec)
-RUN apk add --no-cache git
+# git é necessário para o commit/push automático; ca-certificates para HTTPS no push
+RUN apk add --no-cache git ca-certificates
 
 COPY --from=builder /app/mensageforia .
 
-ENTRYPOINT ["./mensageforia"]
+# clone "de verdade": leva o .git do build context para a imagem final
+COPY --from=builder /app/.git ./.git
+
+# entrypoint configura user.name/email e injeta o GITHUB_TOKEN no remote antes de subir o app
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["./mensageforia"]

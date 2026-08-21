@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"mensageforia/internal/git"
-	"mensageforia/internal/storage"
 	"mensageforia/internal/ollama"
+	"mensageforia/internal/storage"
 )
 
 var temas = []string{
@@ -23,7 +23,6 @@ var temas = []string{
 	"coragem",
 	"recomeço",
 	"persistência",
-	"determinação",
 	"autoconfiança",
 	"sonhos",
 	"mudança",
@@ -40,18 +39,19 @@ func randTema(temas []string) string {
 	sorteado := temas[indice]
 	return sorteado
 }
-func temaPrompt() string {
-	temaEscolhido := randTema(temas)
-	promptFinal := fmt.Sprintf(promptTemplate, temaEscolhido)
 
-	return promptFinal
-
+// buildPrompt monta o prompt final a partir do tema já sorteado.
+func buildPrompt(tema string) string {
+	return fmt.Sprintf(promptTemplate, tema)
 }
 
 // GenerateAndCommit gera a mensagem via Ollama e persiste em SQLite + arquivos + git.
 // Se algum passo falhar, apenas loga e continua (não trava o fluxo principal).
 func GenerateAndCommit(client *ollama.Client, s *storage.Storage) error {
-	prompt := temaPrompt()
+	// Sorteia o tema UMA vez: o mesmo tema vai no prompt, no SQLite,
+	// no .md e na mensagem de commit.
+	tema := randTema(temas)
+	prompt := buildPrompt(tema)
 
 	resposta, err := client.Generate(prompt)
 	if err != nil {
@@ -60,7 +60,6 @@ func GenerateAndCommit(client *ollama.Client, s *storage.Storage) error {
 
 	now := time.Now()
 	timestamp := now.Format("2006-01-02-15h04")
-	tema := randTema(temas)
 
 	// 1. Salvar no SQLite
 	if err := s.SaveMessage(tema, prompt, resposta, timestamp); err != nil {
@@ -96,8 +95,8 @@ func saveMarkdown(tema, resposta, timestamp string) error {
 	filename := fmt.Sprintf("%s.md", timestamp)
 	filePath := filepath.Join("messages", filename)
 
-	// Conteúdo: metadado opcional no início + a resposta pura
-	content := fmt.Sprintf("---\\ntheme: %s\\ntimestamp: %s\\n---\\n%s", tema, timestamp, resposta)
+	// Conteúdo: metadado no início (frontmatter YAML) + a resposta pura
+	content := fmt.Sprintf("---\ntheme: %s\ntimestamp: %s\n---\n%s", tema, timestamp, resposta)
 
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		return fmt.Errorf("escrever arquivo %s: %w", filename, err)

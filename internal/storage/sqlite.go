@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	_ "modernc.org/sqlite"
 )
@@ -19,7 +21,12 @@ func (s *Storage) Close() error {
 }
 
 // InitDB abre (ou cria) o arquivo .db e garante que o schema existe.
+// Cria o diretório pai caso não exista (ex: ./data/mensageforia.db).
 func InitDB(path string) (*Storage, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, fmt.Errorf("criar diretório do banco: %w", err)
+	}
+
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("abrir banco: %w", err)

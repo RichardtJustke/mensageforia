@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - messages/**
+  workflow_dispatch: # permite disparar manualmente pela aba Actions (pra testar)
 
 jobs:
   send-email:
@@ -13,44 +14,56 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # necessário para o git diff HEAD~1 abaixo
 
-      - name: Read changed markdown file
-        id: read_file
+      - name: Extract message info
+        id: msg
         run: |
-          FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.md$' || true)
-          if [ -z "$FILES" ]; then
-            FILES=$(ls -t messages/*.md 2>/dev/null | head -1)
+          FILE=$(git diff --name-only HEAD~1 HEAD | grep '\.md$' | head -n 1 || true)
+          if [ -z "$FILE" ]; then
+            FILE=$(ls -t messages/*.md 2>/dev/null | head -n 1 || true)
           fi
-          echo "changed_file=$FILES" >> $GITHUB_OUTPUT
+          if [ -z "$FILE" ]; then
+            echo "Nenhum .md encontrado; nada para enviar."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Display file content
-        run: |
-          if [ -n "${{ steps.read_file.outputs.changed_file }}" ]; then
-            cat "${{ steps.read_file.outputs.changed_file }}"
-          fi
+          # Metadados do frontmatter do .md
+          THEME=$(sed -n 's/^theme:[[:space:]]*//p' "$FILE" | head -n 1)
+          TS=$(sed -n 's/^timestamp:[[:space:]]*//p' "$FILE" | head -n 1)
+
+          # Corpo da mensagem = tudo depois do segundo '---'
+          BODY=$(awk 'f {print} /^---$/{c++; if (c==2) f=1}' "$FILE")
+
+          {
+            echo "found=true"
+            echo "file=$FILE"
+            echo "theme=${THEME:-desconhecido}"
+            echo "timestamp=${TS:-$(date -u +"%Y-%m-%d %H:%M UTC")}"
+            echo "body<<MESSAGE_EOF"
+            printf '%s\n' "$BODY"
+            echo "MESSAGE_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Send email
+        if: steps.msg.outputs.found == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          subject: "Nova mensagem motivacional gerada"
-          body: |
-            <h3>Nova mensagem automática</h3>
-            <p><strong>Tema:</strong> ${THEME}</p>
-            <p><strong>Horário:</strong> ${TIMESTAMP}</p>
-            <p>${CONTENT}</p>
-          from: "${EMAIL_USER}"
-          to: "${EMAIL_TO}"
-          password: "${EMAIL_PASS}"
-          from_name: "MensageForia Bot"
           secure: true
-        env:
-          THEME: ${{ github.event.head_commit.message || 'unknown' }}
-          TIMESTAMP: $(date -u +"%Y-%m-%d %H:%M UTC")
-          CONTENT: |
-            <p>Uma nova mensagem motivacional foi gerada:</p>
-            <pre>${{ steps.read_file.outputs.changed_file }}</pre>
-          EMAIL_USER: "${{ secrets.EMAIL_USER }}"
-          EMAIL_TO: "${{ secrets.EMAIL_TO }}"
-          EMAIL_PASS: "${{ secrets.EMAIL_PASS }}"
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          from: ${{ secrets.EMAIL_USER }}
+          to: ${{ secrets.EMAIL_TO }}
+          from_name: "MensageForia Bot"
+          subject: "Nova mensagem motivacional: ${{ steps.msg.outputs.theme }}"
+          html_body: |
+            <h3>Nova mensagem automática</h3>
+            <p><strong>Tema:</strong> ${{ steps.msg.outputs.theme }}</p>
+            <p><strong>Horário:</strong> ${{ steps.msg.outputs.timestamp }}</p>
+            <p><strong>Arquivo:</strong> ${{ steps.msg.outputs.file }}</p>
+            <hr>
+            <pre>${{ steps.msg.outputs.body }}</pre>

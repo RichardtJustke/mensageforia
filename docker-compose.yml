@@ -10,11 +10,14 @@ services:
     build: .
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-MensageForia Bot}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-bot@mensageforia.local}
       - TZ=America/Sao_Paulo
       - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
-      - ./.db:/app/.db: persisted
-      - ./messages:/app/messages: persisted
+      # pasta de dados (SQLite) e pasta das mensagens geradas
+      - ./data:/app/data
+      - ./messages:/app/messages
     depends_on:
       - ollama
 
