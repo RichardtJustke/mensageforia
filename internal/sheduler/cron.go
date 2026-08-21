@@ -9,6 +9,7 @@ import (
 
 	"mensageforia/internal/message"
 	"mensageforia/internal/ollama"
+	"mensageforia/internal/storage"
 )
 
 func setLocation() (*time.Location, error) {
@@ -19,7 +20,7 @@ func setLocation() (*time.Location, error) {
 	return loc, nil
 }
 
-func setupCron(client *ollama.Client) error {
+func SetupCron(client *ollama.Client, db *storage.Storage) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	loc, err := setLocation()
@@ -31,7 +32,7 @@ func setupCron(client *ollama.Client) error {
 	c := cron.New(cron.WithLocation(loc))
 
 	job := func() {
-		if err := message.GenerateAndCommit(client); err != nil {
+		if err := message.GenerateAndCommit(client, db); err != nil {
 			logger.Error("falha ao gerar mensagem", "detalhe", err)
 		}
 	}
