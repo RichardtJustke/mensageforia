@@ -1,14 +1,17 @@
-package sheduler
+package scheduler
 
 import (
-	"github.com/robfig/cron/v3"
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/robfig/cron/v3"
+
+	"mensageforia/internal/message"
+	"mensageforia/internal/ollama"
 )
 
 func setLocation() (*time.Location, error) {
-
 	loc, err := time.LoadLocation("America/Sao_Paulo")
 	if err != nil {
 		return nil, err
@@ -16,8 +19,9 @@ func setLocation() (*time.Location, error) {
 	return loc, nil
 }
 
-func setupCron() error {
+func setupCron(client *ollama.Client) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 	loc, err := setLocation()
 	if err != nil {
 		logger.Error("falha ao carregar localização", "detalhe", err)
@@ -26,30 +30,30 @@ func setupCron() error {
 
 	c := cron.New(cron.WithLocation(loc))
 
-	_, err := c.AddFunc("00 08 * * *", func() {
-		//ativa o message as 8:00
-	})
+	job := func() {
+		if err := message.GenerateAndCommit(client); err != nil {
+			logger.Error("falha ao gerar mensagem", "detalhe", err)
+		}
+	}
+
+	_, err = c.AddFunc("00 08 * * *", job)
 	if err != nil {
 		logger.Error("falha ao agendar tarefa", "detalhe", err)
 		return err
 	}
 
-	_, err := c.AddFunc("00 12 * * *", func() {
-		//ativa o message as 12:00
-	})
+	_, err = c.AddFunc("00 12 * * *", job)
 	if err != nil {
 		logger.Error("falha ao agendar tarefa", "detalhe", err)
 		return err
 	}
 
-	_, err := c.AddFunc("00 18 * * *", func() {
-		//ativa o message as 18:00
-	})
+	_, err = c.AddFunc("00 18 * * *", job)
 	if err != nil {
 		logger.Error("falha ao agendar tarefa", "detalhe", err)
 		return err
 	}
+
 	c.Start()
-	defer c.Stop()
 	select {}
 }
