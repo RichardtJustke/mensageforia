@@ -18,8 +18,8 @@ services:
     restart: unless-stopped
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-MensageForia Bot}
-      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-bot@mensageforia.local}
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-RichardtJustke}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-richardtjustke@users.noreply.github.com}
       - TZ=${TZ:-America/Sao_Paulo}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
       - MSG_WINDOW_START=${MSG_WINDOW_START:-08:00}

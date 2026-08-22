@@ -3,8 +3,8 @@
 # Prepara o git (identidade + remote autenticado) antes de executar o binário.
 set -eu
 
-GIT_NAME="${GIT_AUTHOR_NAME:-MensageForia Bot}"
-GIT_EMAIL="${GIT_AUTHOR_EMAIL:-bot@mensageforia.local}"
+GIT_NAME="${GIT_AUTHOR_NAME:-RichardtJustke}"
+GIT_EMAIL="${GIT_AUTHOR_EMAIL:-richardtjustke@users.noreply.github.com}"
 
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   # Evita erro de "dubious ownership" quando o .git vem de outro UID (build context)
