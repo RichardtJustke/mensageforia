@@ -32,6 +32,19 @@ if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/n
       esac
     fi
   fi
+  # 3. Commit + push de mensagens pendentes (previne perda em reinicialização)
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    UNTRACKED=$(git ls-files --others --exclude-standard -- messages/ 2>/dev/null || true)
+    MODIFIED=$(git diff --name-only -- messages/ 2>/dev/null || true)
+    if [ -n "$UNTRACKED" ] || [ -n "$MODIFIED" ]; then
+      echo "[entrypoint] Mensagens pendentes encontradas, fazendo commit+push..."
+      git add messages/
+      git commit -m "mensagem automática: pendências ($(date +%Y-%m-%d-%Hh%M))" || true
+      git push || echo "[entrypoint] WARN: push falhou, tentando novamente após o app iniciar"
+    else
+      echo "[entrypoint] Nenhuma mensagem pendente."
+    fi
+  fi
 fi
 
 exec "$@"
